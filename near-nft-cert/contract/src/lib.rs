@@ -14,6 +14,8 @@ use near_sdk::{
     setup_alloc, env, near_bindgen, AccountId, BorshStorageKey, Promise, PromiseOrValue,
 };
 
+setup_alloc!();
+
 #[derive(BorshSerialize, BorshStorageKey)]
 enum StorageKey {
     NonFungibleToken,
@@ -24,12 +26,12 @@ enum StorageKey {
 }
 
 // DEFINE MODEL:
-#[serde(crate = "near_sdk::serde")]
 #[derive(BorshDeserialize, BorshSerialize, Clone, Serialize)]
+#[serde(crate = "near_sdk::serde")]
 pub struct Certificate {
     pub owner_name: String,
     pub issuer_account: ValidAccountId,
-    pub isApproved: bool,
+    pub is_approved: bool,
     pub metadata: TokenMetadata,
     pub owner_account: ValidAccountId 
 }
@@ -70,8 +72,8 @@ impl Contract {
 
         let metadata = NFTContractMetadata {
             spec: NFT_METADATA_SPEC.to_string(),
-            name: "Example NEAR non-fungible token".to_string(),
-            symbol: "EXAMPLE".to_string(),
+            name: "Near L1 Certificate NFT".to_string(),
+            symbol: "L1".to_string(),
             icon: Some(DATA_IMAGE_SVG_NEAR_ICON.to_string()),
             base_uri: None,
             reference: None,
@@ -109,7 +111,14 @@ impl Contract {
         return false;
     }
 
-    pub fn new_cert(&mut self, owner_name: String, owner_account: ValidAccountId, media_uri: String, media_hash: String, issued_date: String) -> Certificate {
+    pub fn new_cert(
+        &mut self,
+        _owner_name: String,
+        _owner_account: ValidAccountId, 
+        _media_uri: String,
+        _media_hash: String,
+        _issued_date: String
+        ) -> Certificate {
         self.only_issuer();
 
         let predecessor = env::predecessor_account_id();
@@ -120,7 +129,7 @@ impl Contract {
         let metadata = TokenMetadata {
             title: Some("L1 Certificate".into()),
             description: Some("".into()),
-            media: None,
+            media: Some(_media_uri.into()),
             media_hash: None,
             copies: Some(1u64),
             issued_at: None,
@@ -133,14 +142,14 @@ impl Contract {
         };
 
         let cert = Certificate {
-            owner_name: owner_name,
+            owner_name: _owner_name,
             issuer_account: creator.unwrap().account,
-            isApproved: false,
+            is_approved: false,
             metadata: metadata,
-            owner_account: owner_account.clone() 
+            owner_account: _owner_account.clone() 
         };
 
-        self.certs_map.insert(&owner_account, &cert);
+        self.certs_map.insert(&_owner_account, &cert);
         return cert;
     }
 
@@ -151,7 +160,7 @@ impl Contract {
             );
 
         let mut cert = self.certs_map.get(&account).unwrap();
-        cert.isApproved = true;
+        cert.is_approved = true;
         return true;
     }
 
@@ -165,9 +174,13 @@ impl Contract {
             );
 
         let cert = self.certs_map.get(&account).unwrap();
-        let token = self.nft_token.mint("1".to_string(), account, Some(cert.metadata));
+        let token = self.nft_token.mint(cert.owner_account.to_string(), account, Some(cert.metadata));
 
         return token;
+    }
+
+    pub fn transfer_to_owner(&mut self, account: ValidAccountId) {
+        self.nft_transfer(account.clone(), account.clone().to_string(), None, None);
     }
 
     //View function
