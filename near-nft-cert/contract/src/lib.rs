@@ -93,7 +93,7 @@ impl Contract {
                 Some(StorageKey::Enumeration),
                 Some(StorageKey::Approval),
                 ),
-                metadata: LazyOption::new(StorageKey::Metadata, Some(&metadata)),
+            metadata: LazyOption::new(StorageKey::Metadata, Some(&metadata)),
         }
     }
 
@@ -117,7 +117,6 @@ impl Contract {
         _owner_account: ValidAccountId, 
         _media_uri: String,
         _media_hash: String,
-        _issued_date: String
         ) -> Certificate {
         self.only_issuer();
 
@@ -132,7 +131,7 @@ impl Contract {
             media: Some(_media_uri.into()),
             media_hash: None,
             copies: Some(1u64),
-            issued_at: None,
+            issued_at: Some(env::block_timestamp().to_string()),
             expires_at: None,
             starts_at: None,
             updated_at: None,
@@ -153,16 +152,17 @@ impl Contract {
         return cert;
     }
 
-    pub fn approve(&mut self, account: ValidAccountId) -> bool {
-        assert!(
-            self.certs_map.get(&account).is_some(),
-            "This account doesn't have any cert"
-            );
+    // pub fn approve(&mut self, account: ValidAccountId) -> bool {
+    //     assert!(
+    //         self.certs_map.get(&account).is_some(),
+    //         "This account doesn't have any cert"
+    //         );
+    //     self.only_owner();
 
-        let mut cert = self.certs_map.get(&account).unwrap();
-        cert.is_approved = true;
-        return true;
-    }
+    //     let mut cert = self.certs_map.get(&account).unwrap();
+    //     cert.is_approved = true;
+    //     return true;
+    // }
 
     #[payable]
     pub fn mint_cert(&mut self, account: ValidAccountId) -> Token {
@@ -179,7 +179,9 @@ impl Contract {
         return token;
     }
 
+    #[payable]
     pub fn transfer_to_owner(&mut self, account: ValidAccountId) {
+        self.only_owner();
         self.nft_transfer(account.clone(), account.clone().to_string(), None, None);
     }
 
